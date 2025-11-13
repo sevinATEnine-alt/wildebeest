@@ -1,40 +1,80 @@
+-- Declare variables
 local zones = workspace:WaitForChild("TeleportZones")
 
 local events = game.ReplicatedStorage:WaitForChild("Events")
 local zoneEvent = events:WaitForChild("ZoneEvent")
 
-local default = {
-	["owner"] = nil,
-	["max"] = 1,
-	["current"] = 0,
-	["players"] = {},
-	["created"] = false
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+-- Table of zones and their properties
+local teleportZones = {
+	[1] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	},
+	[2] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	},
+	[3] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	},
+	[4] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	},
+	[5] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	},
+	[6] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	},
+	[7] = {
+		["owner"] = nil,
+		["max"] = 1,
+		["current"] = 0,
+		["players"] = {},
+		["created"] = false
+	}
 }
 
-local teleportZones = {
-	[1] = default,
-	[2] = default,
-	[3] = default,
-	[4] = default,
-	[5] = default,
-	[6] = default,
-	[7] = default
-}
+-- Intialize the teleport zones
 for i, v in zones:GetChildren() do
 	if not v:IsA("Model") then continue end
 
 	for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
 		b.CanTouch = true
-		-- print("CanTouch: ", b.CanTouch)
-
 	end
 end
 
+-- Change the player count interface for the teleport zone
 local function updatePlayerCount(zoneId, current, max)
-	-- print("Zone: "..zoneId.." Current:"..current.." Max:"..max)
 	game.Workspace.TeleportZones[zoneId].BillboardGui.PlayerCount.Text = current .. "/" .. max
 end
 
+-- Go through everything inside the zones
 for i, v in zones:GetChildren() do
 	if not v:IsA("Model") then continue end
 	for k, p in v.Border:GetChildren() do
@@ -50,60 +90,58 @@ for i, v in zones:GetChildren() do
 					local player = game.Players:GetPlayerFromCharacter(hit.Parent)
 					if player then
 						
-						-- print("Hit from player: ", player)
-						
+	
 						local zoneNumber = i
 						
-						-- print("Player id: ", player.UserId)
-						-- print("Player list: ", teleportZones[i].players)
+						-- Checks if player isn't in the zone
 						if not table.find(teleportZones[i].players, player.UserId) then
-							-- print("Player not in player list. Teleporting. Player: ", player)
+							
 							table.insert(teleportZones[i].players, player.UserId)
 
 							player.Character.HumanoidRootPart.CFrame = game.Workspace.TeleportZones[i].TP.CFrame
 							game.Workspace.TeleportZones[i].BillboardGui.StateLabel.Text = "Creating party..."
 							
+							-- Makes all of the parts in the teleport zones uncollidable
 							for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
 								b.CanTouch = false
-								-- print("CanTouch: ", b.CanTouch)
 							end
 						else
-							-- print("Repeated touch. Ignoring")
 							return
 						end
 						
+						-- Checks if there is an owner to the zone
 						if (teleportZones[i].owner == nil) then
 							teleportZones[i].owner = player.UserId		
 							teleportZones[i].current = 1
 							print("Current:" .. teleportZones[i].current)
 
-							-- print("New owner: ", player.UserId)
 							zoneEvent:FireClient(player, "showgui")
 
 						else
 							teleportZones[i].current += 1
 							print("Current:" .. teleportZones[i].current)
-							-- print("Adding player: ", player)
 							zoneEvent:FireClient(player, "shownothostgui")
 						end
 						
 						updatePlayerCount(i,teleportZones[i].current, teleportZones[i].max)	
 						
+						-- Checks if a party is already created
 						if teleportZones[i].created then
+							
+							-- Check if full
 							if teleportZones[i].current == teleportZones[i].max then
-
+								
+								-- Makes it so you cant join
 								for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
 									b.CanTouch = false
-									-- print("CanTouch: ", b.CanTouch)
 
 								end
 
 							else
-
+								
+								-- Allow people to join
 								for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-									-- print(i, a, b)
 									b.CanTouch = true
-									-- print("CanTouch: ", b.CanTouch)
 								end
 
 							end
@@ -118,39 +156,42 @@ for i, v in zones:GetChildren() do
 	end
 end
 
+-- Deletes party and kicks everyone out
 local function disband(i)
-		
+	
+	print("Disband: "..i)
+	
 	teleportZones[i].owner = nil
 	teleportZones[i].current = 0
 	teleportZones[i].players = {}
 	teleportZones[i].max = 1
 
+	-- Make all borders interactable
 	for e, v in zones:GetChildren() do
 		if not v:IsA("Model") then continue end
 
 		for a, b in game.Workspace.TeleportZones[e].Border:GetChildren() do
 			b.CanTouch = true
-			-- print("CanTouch: ", b.CanTouch)
 		end
 	end
 
+
+	-- Set players to 0/1
 	updatePlayerCount(i, 0, 1)
 
 
 	game.Workspace.TeleportZones[i].BillboardGui.StateLabel.Text = "Waiting for players..."
 
-	-- print(teleportZones[i])
-
 end
 
+-- When zoneEvent is fired
 zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
-	-- print(type)
+	
+	-- Player leaves
 	if type == "leave" then
 
 		for i, q in teleportZones do
 			if not table.find(q.players, playerFired.UserId) then continue end
-
-			-- print(i, q, q.players, playerFired.UserId)
 			
 			if teleportZones[i].owner == playerFired.UserId then
 				teleportZones[i].owner = 0
@@ -164,27 +205,24 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 			print("Current: ", teleportZones[i].current)
 
 			updatePlayerCount(i, teleportZones[i].current, teleportZones[i].max)
-
-			-- print(teleportZones[i])
 			
+			-- Checks if maximum players
 			if teleportZones[i].current == teleportZones[i].max then
 
 				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
 					b.CanTouch = false
-					-- print("CanTouch: ", b.CanTouch)
 
 				end
 
 			else
 
 				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-					-- print(i, a, b)
 					b.CanTouch = true
-					-- print("CanTouch: ", b.CanTouch)
 				end
 
 			end
 			
+			-- Checks if players are in the zone
 			if teleportZones[i].current == 0 then
 				teleportZones[i].created = false
 				disband(i)
@@ -194,9 +232,9 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 
 		end
 
+	-- Player creates party
 	elseif type == "create" then
 			
-		-- print("Create " .. amount)
 		
 		for i, q in teleportZones do
 			
@@ -205,20 +243,18 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 			teleportZones[i].max = amount
 			teleportZones[i].created = true
 			
+			-- Check if max players
 			if teleportZones[i].current == teleportZones[i].max then
 
 				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
 					b.CanTouch = false
-					-- print("CanTouch: ", b.CanTouch)
 
 				end
 			
 			else
 				
 				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-					-- print(i, a, b)
 					b.CanTouch = true
-					-- print("CanTouch: ", b.CanTouch)
 				end
 
 			end
@@ -234,48 +270,39 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 				task.wait(1)
 				
 			end
+			
 			-- Teleport
-			
-			
-			-- Assumes this is a server script.
-			local TeleportService = game:GetService("TeleportService")
-			local Players = game:GetService("Players")
 
-			-- Replace with your target Place ID
-			local placeId = 92127384255319
-
-			-- Get the list of players to teleport
+			local placeId = 92127384255319 -- Game
 			local playerList = {}
-			
+
+			-- Add players
 			for uid, player in teleportZones[i].players do
 				table.insert(playerList, game.Players:GetPlayerByUserId(player))
 			end
 			
-			-- print(playerList)
-
-			-- Create a TeleportOptions object to specify the reserved server.
+			-- Set options and players
 			local teleportOptions = Instance.new("TeleportOptions")
 			teleportOptions.ShouldReserveServer = true
-
-			-- Create a table for the teleport data
+			
 			local teleportData = {
 				["players"] =  #teleportZones[i].players
 			}
-
-			-- Set the teleport data in the options object
+			
+			
+			-- Set options and teleport
 			teleportOptions:SetTeleportData(teleportData)
-
-			-- Teleport the players. The PlayerList variable is a table containing all Player objects.
 			local success, result = pcall(function()
 				TeleportService:TeleportAsync(placeId, playerList, teleportOptions)
 			end)
-
+			
 			if success then
-				-- print("Players teleported to a reserved server!")
 			else
 				warn("Teleport failed: " .. tostring(result))
 			end
 			
+			
+			-- Last 3 seconds of loading
 			for t=3, 1, -1 do
 				if not teleportZones[i].created then
 					return
@@ -283,11 +310,8 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 				game.Workspace.TeleportZones[i].BillboardGui.StateLabel.Text = "Leaving in " .. tostring(t) .. "..."
 				task.wait(1)
 			end
-			
 			teleportZones[i].created = false
 			disband()			
-					
 		end
-
 	end
 end)
