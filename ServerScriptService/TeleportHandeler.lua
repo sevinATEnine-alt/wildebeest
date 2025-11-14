@@ -7,66 +7,34 @@ local zoneEvent = events:WaitForChild("ZoneEvent")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 
+local function setCanTouch(i, canTouchVal)
+	for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
+		b.CanTouch = canTouchVal
+	end
+end
+
 -- Table of zones and their properties
-local teleportZones = {
-	[1] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	},
-	[2] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	},
-	[3] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	},
-	[4] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	},
-	[5] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	},
-	[6] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	},
-	[7] = {
-		["owner"] = nil,
-		["max"] = 1,
-		["current"] = 0,
-		["players"] = {},
-		["created"] = false
-	}
+
+local defaultTeleportZone = {
+	["owner"] = nil,
+	["max"] = 1,
+	["current"] = 0,
+	["players"] = {},
+	["created"] = false
 }
+
+local teleportZones = {}
+
+-- Initialize array of teleportZones
+for i = 1, 7 do
+	table.insert(teleportZones, defaultTeleportZone)
+end
 
 -- Intialize the teleport zones
 for i, v in zones:GetChildren() do
 	if not v:IsA("Model") then continue end
 
-	for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-		b.CanTouch = true
-	end
+	setCanTouch(i, true)
 end
 
 -- Change the player count interface for the teleport zone
@@ -97,52 +65,51 @@ for i, v in zones:GetChildren() do
 						if not table.find(teleportZones[i].players, player.UserId) then
 							
 							table.insert(teleportZones[i].players, player.UserId)
+							
+							-- Show creating party message
 
 							player.Character.HumanoidRootPart.CFrame = game.Workspace.TeleportZones[i].TP.CFrame
 							game.Workspace.TeleportZones[i].BillboardGui.StateLabel.Text = "Creating party..."
 							
 							-- Makes all of the parts in the teleport zones uncollidable
-							for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-								b.CanTouch = false
-							end
+							setCanTouch(i, false)
 						else
 							return
 						end
 						
 						-- Checks if there is an owner to the zone
 						if (teleportZones[i].owner == nil) then
+							
+							-- Set the owner of the zone
 							teleportZones[i].owner = player.UserId		
 							teleportZones[i].current = 1
-							print("Current:" .. teleportZones[i].current)
-
+							
+							
+							-- Show the owner the gui
 							zoneEvent:FireClient(player, "showgui")
 
 						else
 							teleportZones[i].current += 1
-							print("Current:" .. teleportZones[i].current)
 							zoneEvent:FireClient(player, "shownothostgui")
 						end
 						
-						updatePlayerCount(i,teleportZones[i].current, teleportZones[i].max)	
+						-- Update the player count
+						
+						updatePlayerCount(i, teleportZones[i].current, teleportZones[i].max)	
 						
 						-- Checks if a party is already created
 						if teleportZones[i].created then
 							
-							-- Check if full
+							-- Check if current zone full
 							if teleportZones[i].current == teleportZones[i].max then
 								
-								-- Makes it so you cant join
-								for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-									b.CanTouch = false
-
-								end
+								-- Makes it so you others join
+								setCanTouch(i, false)
 
 							else
 								
 								-- Allow people to join
-								for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-									b.CanTouch = true
-								end
+								setCanTouch(i, true)
 
 							end
 							
@@ -158,9 +125,7 @@ end
 
 -- Deletes party and kicks everyone out
 local function disband(i)
-	
-	print("Disband: "..i)
-	
+		
 	teleportZones[i].owner = nil
 	teleportZones[i].current = 0
 	teleportZones[i].players = {}
@@ -170,9 +135,7 @@ local function disband(i)
 	for e, v in zones:GetChildren() do
 		if not v:IsA("Model") then continue end
 
-		for a, b in game.Workspace.TeleportZones[e].Border:GetChildren() do
-			b.CanTouch = true
-		end
+		setCanTouch(i, true)
 	end
 
 
@@ -202,23 +165,17 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 			table.remove(teleportZones[i].players, table.find(teleportZones[i].players, playerFired.UserId))
 			
 			teleportZones[i].current -= 1
-			print("Current: ", teleportZones[i].current)
 
 			updatePlayerCount(i, teleportZones[i].current, teleportZones[i].max)
 			
 			-- Checks if maximum players
 			if teleportZones[i].current == teleportZones[i].max then
 
-				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-					b.CanTouch = false
-
-				end
+				setCanTouch(i, false)
 
 			else
 
-				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-					b.CanTouch = true
-				end
+				setCanTouch(i, true)
 
 			end
 			
@@ -246,16 +203,11 @@ zoneEvent.OnServerEvent:Connect(function(playerFired, type, amount)
 			-- Check if max players
 			if teleportZones[i].current == teleportZones[i].max then
 
-				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-					b.CanTouch = false
-
-				end
+				setCanTouch(i, false)
 			
 			else
 				
-				for a, b in game.Workspace.TeleportZones[i].Border:GetChildren() do
-					b.CanTouch = true
-				end
+				setCanTouch(i, true)
 
 			end
 			
